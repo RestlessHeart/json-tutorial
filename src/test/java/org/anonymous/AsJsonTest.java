@@ -129,4 +129,26 @@ public class AsJsonTest {
         testParseWrongNumber("NAN",jsonNode);
         testParseWrongNumber("nan",jsonNode);
     }
+
+    @Test
+    public void testParseString(){
+        Assert.assertEquals(asJson.parse(jsonNode,"\"\""),ResultCode.OK);
+        Assert.assertEquals(jsonNode.getString(),"");
+        Assert.assertEquals(asJson.parse(jsonNode,"\"hello world\""),ResultCode.OK);
+        Assert.assertEquals(jsonNode.getString(),"hello world");
+        Assert.assertEquals(asJson.parse(jsonNode,"\"a\\na\""),ResultCode.OK);
+        Assert.assertEquals(jsonNode.getString(),"a\na");
+        Assert.assertEquals(asJson.parse(jsonNode,"\"a\\\"a\""),ResultCode.OK);
+        Assert.assertEquals(jsonNode.getString(),"a\"a");
+        Assert.assertEquals(asJson.parse(jsonNode,"\"a\\\"\\b\\f\\n\\r\\t\\/a\""),ResultCode.OK);
+        Assert.assertEquals(jsonNode.getString(),"a\"\b\f\n\r\t/a");
+        Assert.assertEquals(asJson.parse(jsonNode,"\"a\\\u005da\""),ResultCode.OK);
+        Assert.assertEquals(jsonNode.getString(),"a\u005da");
+    }
+
+    @Test
+    public void testParseWrongString(){
+        Assert.assertEquals(asJson.parse(jsonNode,"a\\\u0020a"),ResultCode.INVALID_VALUE);
+        Assert.assertEquals(asJson.parse(jsonNode,"a\\\u0020a"),ResultCode.INVALID_VALUE);
+    }
 }

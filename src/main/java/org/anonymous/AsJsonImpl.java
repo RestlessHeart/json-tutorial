@@ -15,6 +15,7 @@ public class AsJsonImpl implements AsJson {
 
     public ResultCode parse(JsonNode jsonNode, final String jsonStr) {
         ParseContext parseContext = new ParseContext();
+
         if (jsonStr == null) {
             return ResultCode.EXPECT_VALUE;
         }
@@ -62,6 +63,8 @@ public class AsJsonImpl implements AsJson {
                 return parseValue(jsonNode, parseContext,FALSE,DataType.FALSE);
             case 't':
                 return parseValue(jsonNode, parseContext,TRUE,DataType.TRUE);
+            case '"':
+                return parseStringValue(jsonNode,parseContext);
             default:
                 return parseNumber(jsonNode,parseContext);
         }
@@ -87,6 +90,73 @@ public class AsJsonImpl implements AsJson {
         }else if(dataType== DataType.TRUE){
             jsonNode.setValue(Boolean.TRUE);
         }
+        return ResultCode.OK;
+    }
+
+    private ResultCode parseStringValue(JsonNode jsonNode, ParseContext parseContext){
+        String jsonStr=parseContext.jsonStr;
+        int strSize=0;
+        int pos=1;
+        while(pos<jsonStr.length()&&jsonStr.charAt(pos)!='"'){
+            strSize++;
+            switch (jsonStr.charAt(pos)){
+                case '\\':
+                    if(pos==jsonStr.length()-1){
+                        parseContext.clearN(strSize);
+                        return ResultCode.INVALID_VALUE;
+                    }
+                    pos++;
+                    switch (jsonStr.charAt(pos)) {
+                        case '"':
+                            parseContext.pushChar('"');
+                            break;
+                        case '\\':
+                            parseContext.pushChar('\\');
+                            break;
+                        case '/':
+                            parseContext.pushChar('/');
+                            break;
+                        case 'b':
+                            parseContext.pushChar('\b');
+                            break;
+                        case 'f':
+                            parseContext.pushChar('\f');
+                            break;
+                        case 'n':
+                            parseContext.pushChar('\n');
+                            break;
+                        case 'r':
+                            parseContext.pushChar('\r');
+                            break;
+                        case 't':
+                            parseContext.pushChar('\t');
+                            break;
+                        default:
+                            if(jsonStr.charAt(pos)<0x20){
+                                parseContext.clearN(strSize);
+                                return ResultCode.INVALID_VALUE;
+                            }
+                            parseContext.pushChar(jsonStr.charAt(pos));
+                            break;
+                    }
+                    break;
+                default:
+                    parseContext.pushChar(jsonStr.charAt(pos));
+            }
+            pos++;
+        }
+        if(jsonStr.charAt(pos)=='"'){
+            pos++;
+        }else{
+            return ResultCode.INVALID_VALUE;
+        }
+        parseContext.jsonStr=jsonStr.substring(pos);
+        ResultCode resultCode=parseSuffixWhiteSpace(jsonNode,parseContext);
+        if(ResultCode.OK!=resultCode){
+            return resultCode;
+        }
+        jsonNode.setType(DataType.STRING);
+        jsonNode.setValue(parseContext.popString(strSize));
         return ResultCode.OK;
     }
 
