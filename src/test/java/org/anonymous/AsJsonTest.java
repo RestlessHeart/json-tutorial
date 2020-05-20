@@ -7,6 +7,13 @@ import org.testng.Assert;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 
+import javax.xml.transform.Result;
+import java.nio.charset.Charset;
+import java.util.ArrayList;
+import java.util.List;
+
+import static java.nio.charset.StandardCharsets.UTF_8;
+
 public class AsJsonTest {
 
     private JsonNode jsonNode;
@@ -149,6 +156,88 @@ public class AsJsonTest {
     @Test
     public void testParseWrongString(){
         Assert.assertEquals(asJson.parse(jsonNode,"a\\\u0020a"),ResultCode.INVALID_VALUE);
-        Assert.assertEquals(asJson.parse(jsonNode,"a\\\u0020a"),ResultCode.INVALID_VALUE);
+        Assert.assertEquals(asJson.parse(jsonNode,"a\\\u0000a"),ResultCode.INVALID_VALUE);
+    }
+
+    @Test
+    public void testUtf8(){
+//        String str1="Hello World";
+//        byte[] b1=str1.getBytes(Charset.forName("UTF8"));
+//        for(byte b : b1){
+//            System.out.print(String.format("0x%04X,",b));
+//        }
+//        byte[] b2=new byte[]{0x48,0x65,0x6C,0x6C,0x6F,0x20,0x57,0x6F,0x72,0x6C,0x64};
+//        String str2=new String(b2,Charset.forName("UTF8"));
+//        System.out.println(str2);
+
+
+        String expectStr1="Hello World";
+        byte[] bytes1=expectStr1.getBytes(Charset.forName("utf8"));
+        String jsonStr1="\"\\u0048\\u0065\\u006C\\u006C\\u006F\\u0020\\u0057\\u006F\\u0072\\u006C\\u0064\"";
+        checkUtf8Ok(bytes1, jsonStr1);
+
+        byte[] bytes2=new byte[]{0x24};
+        String jsonStr2="\"\\u0024\"";
+        checkUtf8Ok(bytes2,jsonStr2);
+
+        byte[] bytes3="\u00C2\u00A2".getBytes(Charset.forName("utf8"));
+        String jsonStr3="\"\\u00A2\"";
+        checkUtf8Ok(bytes3, jsonStr3);
+
+        byte[] bytes4="\u00E2\u0082\u00AC".getBytes(Charset.forName("utf8"));
+        String jsonStr4="\"\\u20AC\"";
+        checkUtf8Ok(bytes4, jsonStr4);
+
+        byte[] bytes5="\u00F0\u009D\u0084\u009E".getBytes(Charset.forName("utf8"));
+        String jsonStr5="\"\\uD834\\uDD1E\"";
+        checkUtf8Ok(bytes5, jsonStr5);
+
+        byte[] bytes6="\u00F0\u009D\u0084\u009E".getBytes(Charset.forName("utf8"));
+        String jsonStr6="\"\\ud834\\udd1e\"";
+        checkUtf8Ok(bytes6, jsonStr6);
+    }
+
+    private void checkUtf8Ok(byte[] expect, String jsonStr){
+        String expectStr=new String(expect,Charset.forName("utf8"));
+        ResultCode resultCode=asJson.parse(jsonNode,jsonStr);
+        Assert.assertEquals(resultCode,ResultCode.OK);
+        Assert.assertEquals(jsonNode.getString(),expectStr);
+        printSuccessful(expectStr);
+    }
+
+    private void checkUtf8NotOk(String jsonStr, ResultCode resultCode){
+        ResultCode actualResultCode=asJson.parse(jsonNode,jsonStr);
+        Assert.assertEquals(actualResultCode,resultCode);
+        printFail(jsonStr);
+    }
+
+    private void printSuccessful(String str){
+        System.out.println(String.format("%s check successful", str));
+    }
+
+    private void printFail(String str){
+        System.out.println(String.format("%s check fail", str));
+    }
+
+    @Test
+    public void testWrongUtf8(){
+        ResultCode resultCode=ResultCode.PARSE_INVALID_UNICODE_HEX;
+        List<String> jsonStrs=new ArrayList<>();
+
+        jsonStrs.add("\"\\u\"");
+        jsonStrs.add("\"\\u0\"");
+        jsonStrs.add("\"\\u01\"");
+        jsonStrs.add("\"\\u012\"");
+        jsonStrs.add("\"\\u/00\"");
+        jsonStrs.add("\"\\u0G00\"");
+        jsonStrs.add("\"\\u00/0\"");
+        jsonStrs.add("\"\\u00G0\"");
+        jsonStrs.add("\"\\u000g\"");
+        jsonStrs.add("\"\\u 123\"");
+
+        for(String jsonStr : jsonStrs){
+            checkUtf8NotOk(jsonStr,resultCode);
+        }
+
     }
 }

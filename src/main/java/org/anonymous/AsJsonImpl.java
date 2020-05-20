@@ -107,6 +107,40 @@ public class AsJsonImpl implements AsJson {
                     }
                     pos++;
                     switch (jsonStr.charAt(pos)) {
+                        case 'u':
+                            pos++;
+                            Integer result=parseHex4(pos,jsonStr);
+                            if(result==null){
+                                return ResultCode.PARSE_INVALID_UNICODE_HEX;
+                            }
+                            if(result>= 0xD800&& result<=0xDBFF){
+                                pos+=4;
+                                if(pos>=jsonStr.length()){
+                                    return ResultCode.PARSE_INVALID_UNICODE_HEX;
+                                }
+                                if(jsonStr.charAt(pos)!='\\'){
+                                    return ResultCode.PARSE_INVALID_UNICODE_HEX;
+                                }
+                                if(jsonStr.charAt(pos+1)!='u'){
+                                    return ResultCode.PARSE_INVALID_UNICODE_HEX;
+                                }
+                                pos+=2;
+                                Integer resultLow=parseHex4(pos,jsonStr);
+                                if(resultLow==null){
+                                    return ResultCode.PARSE_INVALID_UNICODE_HEX;
+                                }
+                                if(resultLow<=0xDC00||resultLow>=0xDFFF){
+                                    return ResultCode.PARSE_INVALID_UNICODE_SURROGATE;
+                                }
+                                result=(((result-0xD800)<<10)|(resultLow-0xDC00))+0x10000;
+                            }
+                            Integer count=encodeUtf8(result,parseContext);
+                            if(count==0){
+                                return ResultCode.PARSE_INVALID_UNICODE_HEX;
+                            }
+                            strSize+=(count-1);
+                            pos+=3;
+                            break;
                         case '"':
                             parseContext.pushChar('"');
                             break;
@@ -145,10 +179,10 @@ public class AsJsonImpl implements AsJson {
             }
             pos++;
         }
-        if(jsonStr.charAt(pos)=='"'){
-            pos++;
-        }else{
+        if(pos>jsonStr.length()||jsonStr.charAt(pos)!='"'){
             return ResultCode.INVALID_VALUE;
+        }else{
+            pos++;
         }
         parseContext.jsonStr=jsonStr.substring(pos);
         ResultCode resultCode=parseSuffixWhiteSpace(jsonNode,parseContext);
@@ -185,102 +219,6 @@ public class AsJsonImpl implements AsJson {
             return ResultCode.INVALID_VALUE;
         }
 
-    }
-
-    private ResultCode parseDoubleNumber(JsonNode jsonNode, ParseContext parseContext){
-        String jsonStr=parseContext.jsonStr;
-        int positive=1;
-        int numberPos=0;
-        double result=0;
-        double index=1E0;
-        if(jsonStr.charAt(0)=='-'){
-            positive=-1;
-            numberPos++;
-        }
-        if(jsonStr.charAt(0)=='+'){
-            numberPos++;
-        }
-        if(jsonStr.charAt(numberPos)=='.'||jsonStr.charAt(numberPos)=='-'||jsonStr.charAt(numberPos)=='+'){
-            return ResultCode.INVALID_VALUE;
-        }
-        boolean findPoint=false;
-        boolean findIndex=false;
-        double decimal=1;
-        double mantissa=0.0;
-        while(numberPos<jsonStr.length()){
-            if(jsonStr.charAt(numberPos)!='e'&&jsonStr.charAt(numberPos)!='E'){
-                if(jsonStr.charAt(numberPos)>='0'&&jsonStr.charAt(numberPos)<='9'){
-                    if(findPoint){
-
-                        decimal*=0.1;
-                        mantissa+=decimal*(jsonStr.charAt(numberPos)-'0');
-                    }else{
-                        mantissa=mantissa*10+(jsonStr.charAt(numberPos)-'0');
-                    }
-                }else{
-                    if(jsonStr.charAt(numberPos)=='.'){
-                        if(numberPos==0||numberPos==jsonStr.length()-1){
-                            return ResultCode.INVALID_VALUE;
-                        }
-                        findPoint=true;
-                    }else{
-                        return ResultCode.INVALID_VALUE;
-                    }
-                }
-                numberPos++;
-            }else{
-                if(!findIndex){
-                    findIndex=true;
-                    numberPos++;
-                    break;
-                }else{
-                    return ResultCode.INVALID_VALUE;
-                }
-            }
-        }
-        Double.valueOf("");
-        double exp=0.0;
-        int expPositive=1;
-        boolean isFirst=true;
-        if(findIndex){
-            while(numberPos<jsonStr.length()){
-                if(isFirst){
-                    if(jsonStr.charAt(numberPos)=='0'){
-                        return ResultCode.INVALID_VALUE;
-                    }else{
-                        if(jsonStr.charAt(numberPos)=='-'){
-                            expPositive=-1;
-                            numberPos++;
-                            isFirst=false;
-                            continue;
-                        }else if(jsonStr.charAt(numberPos)=='+'){
-                            expPositive=1;
-                            numberPos++;
-                            isFirst=false;
-                            continue;
-                        }
-                        isFirst=false;
-                    }
-                }
-                if(jsonStr.charAt(numberPos)>='0'&&jsonStr.charAt(numberPos)<='9'){
-                    exp=exp*10+(jsonStr.charAt(numberPos)-'0');
-                }else{
-                    return ResultCode.INVALID_VALUE;
-                }
-                numberPos++;
-            }
-        }
-        exp=exp*expPositive;
-        parseContext.jsonStr=jsonStr.substring(numberPos);
-        ResultCode suffixParseResult = parseSuffixWhiteSpace(jsonNode, parseContext);
-        if (suffixParseResult != ResultCode.OK) {
-            return suffixParseResult;
-        }
-
-        result=(mantissa*positive)*Math.pow(10.0,exp);
-        jsonNode.setNum(result);
-        jsonNode.setType(DataType.NUMBER);
-        return ResultCode.OK;
     }
 
     private ResultCode checkNumber(String jsonStr){
@@ -380,4 +318,50 @@ public class AsJsonImpl implements AsJson {
         return ResultCode.OK;
     }
 
+    private Integer parseHex4(int pos, String jsonStr){
+        Integer result=null;
+        int codePoint=0;
+        for(int i=0; i<4;i++){
+            if(pos>=jsonStr.length()){
+                return result;
+            }
+            codePoint<<=4;
+            char c=jsonStr.charAt(pos+i);
+            if((c>='0'&&c<='9')){
+                codePoint|=(c-'0');
+            }else if((c>='A'&&c<='F')){
+                codePoint|=(c-'A'+10);
+            }else if(c>='a'&&c<='f'){
+                codePoint|=(c-'a'+10);
+            }else{
+                return result;
+            }
+        }
+        result=codePoint;
+        return result;
+    }
+
+    private Integer encodeUtf8(Integer codePoint, ParseContext parseContext){
+        Integer pushCount=0;
+        if(codePoint >=0&& codePoint <=0x007F){
+            parseContext.pushChar((char)codePoint.byteValue());
+            pushCount=1;
+        }else if(codePoint<=0x07FF){
+            parseContext.pushChar((char)(0xC0|(codePoint>>6)&0xFF));
+            parseContext.pushChar((char)(0x80|(codePoint)&0x3F));
+            pushCount=2;
+        }else if(codePoint<=0xFFFF){
+            parseContext.pushChar((char)(0xE0|((codePoint >> 12)&0xFF)));
+            parseContext.pushChar((char)(0x80|((codePoint >> 6)&0x3F)));
+            parseContext.pushChar((char)(0x80|(codePoint&0x3F)));
+            pushCount=3;
+        }else if(codePoint<=0x10FFFF){
+            parseContext.pushChar((char)(0xF0|(codePoint>>18)&0x07));
+            parseContext.pushChar((char)(0x80|(codePoint>>12)&0x3F));
+            parseContext.pushChar((char)(0x80|(codePoint>>6)&0x3F));
+            parseContext.pushChar((char)(0x80|(codePoint)&0x3F));
+            pushCount=4;
+        }
+        return pushCount;
+    }
 }
