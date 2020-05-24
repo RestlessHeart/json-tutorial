@@ -2,6 +2,8 @@ package org.anonymous.data;
 
 import org.anonymous.constant.DataType;
 
+import java.util.List;
+
 public class JsonNode {
     DataType type;
 
@@ -33,10 +35,31 @@ public class JsonNode {
         this.value=value;
     }
 
+    public void setValue(Double value){
+        this.value=value;
+    }
+
     public void setValue(Boolean value){
         this.value=value;
     }
+
+    public void setValue(List<JsonNode> value){
+        this.value=value;
+    }
+
+    public List<JsonNode> getArray(){
+        return (List<JsonNode>)this.value;
+    }
+
     public Boolean getBoolean(){
         return (Boolean)this.value;
+    }
+
+    @Override
+    public String toString() {
+        return "JsonNode{" +
+                "type=" + type +
+                ", value=" + value +
+                '}';
     }
 }

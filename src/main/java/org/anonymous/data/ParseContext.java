@@ -8,6 +8,7 @@ public class ParseContext {
     public String jsonStr;
     public Queue<Character> queue;
     public int size;
+    public String currentStr;
 
     public ParseContext(){
         initStack();
@@ -45,4 +46,8 @@ public class ParseContext {
             queue.poll();
         }
     }
+    public void clearCurrentStr(){
+        this.currentStr=null;
+    }
+
 }

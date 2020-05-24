@@ -5,6 +5,9 @@ import org.anonymous.constant.ResultCode;
 import org.anonymous.data.JsonNode;
 import org.anonymous.data.ParseContext;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import static org.anonymous.constant.JsonDataConstant.FALSE;
 import static org.anonymous.constant.JsonDataConstant.NULL;
 import static org.anonymous.constant.JsonDataConstant.TRUE;
@@ -65,6 +68,8 @@ public class AsJsonImpl implements AsJson {
                 return parseValue(jsonNode, parseContext,TRUE,DataType.TRUE);
             case '"':
                 return parseStringValue(jsonNode,parseContext);
+            case '[':
+                return parseArray(jsonNode,parseContext);
             default:
                 return parseNumber(jsonNode,parseContext);
         }
@@ -82,6 +87,11 @@ public class AsJsonImpl implements AsJson {
         if (suffixParseResult != ResultCode.OK) {
             return suffixParseResult;
         }
+        if(parseContext.jsonStr!=null&&parseContext.jsonStr.length()>0){
+            if(parseContext.jsonStr.charAt(0)!=','&&parseContext.jsonStr.charAt(0)!=']'&&parseContext.jsonStr.charAt(0)!='}'){
+                return ResultCode.ROOT_NOT_SINGULAR;
+            }
+        }
         jsonNode.setType(dataType);
         if(dataType==DataType.NULL){
             jsonNode.setValue(NULL);
@@ -94,6 +104,17 @@ public class AsJsonImpl implements AsJson {
     }
 
     private ResultCode parseStringValue(JsonNode jsonNode, ParseContext parseContext){
+        ResultCode resultCode=parseStringRawValue(parseContext);
+        if(ResultCode.OK!=resultCode){
+            return resultCode;
+        }
+        jsonNode.setType(DataType.STRING);
+        jsonNode.setValue(parseContext.currentStr);
+        parseContext.clearCurrentStr();
+        return ResultCode.OK;
+    }
+
+    private ResultCode parseStringRawValue(ParseContext parseContext){
         String jsonStr=parseContext.jsonStr;
         int strSize=0;
         int pos=1;
@@ -185,27 +206,69 @@ public class AsJsonImpl implements AsJson {
             pos++;
         }
         parseContext.jsonStr=jsonStr.substring(pos);
-        ResultCode resultCode=parseSuffixWhiteSpace(jsonNode,parseContext);
-        if(ResultCode.OK!=resultCode){
-            return resultCode;
+        parseWhitespace(parseContext);
+        parseContext.currentStr=parseContext.popString(strSize);
+        return ResultCode.OK;
+    }
+
+    private ResultCode parseArray(JsonNode jsonNode, ParseContext parseContext){
+        String jsonStr=parseContext.jsonStr;
+        int pos=0;
+        List<JsonNode> jsonNodeList=new ArrayList<>();
+        if(jsonStr.charAt(pos)=='['&&jsonStr.charAt(pos+1)==']'){
+            jsonNode.setType(DataType.ARRAY);
+            jsonNode.setValue(jsonNodeList);
+            return ResultCode.OK;
         }
-        jsonNode.setType(DataType.STRING);
-        jsonNode.setValue(parseContext.popString(strSize));
+        jsonStr=jsonStr.substring(pos+1);
+        parseContext.jsonStr=jsonStr;
+        while(true){
+            JsonNode tmpJsonNode=new JsonNode();
+            ResultCode resultCode=parseValue(tmpJsonNode,parseContext);
+            if(ResultCode.OK!=resultCode){
+                return resultCode;
+            }
+            jsonNodeList.add(tmpJsonNode);
+            jsonStr=parseContext.jsonStr;
+            if(jsonStr.charAt(0)==']'){
+                jsonStr=jsonStr.substring(1);
+                parseContext.jsonStr=jsonStr;
+                break;
+            }
+            if(jsonStr.length()==0){
+                return ResultCode.INVALID_VALUE;
+            }
+            if(jsonStr.charAt(0)==','){
+                jsonStr=jsonStr.substring(1);
+                parseContext.jsonStr=jsonStr;
+                continue;
+            }else{
+                return ResultCode.INVALID_VALUE;
+            }
+        }
+        jsonNode.setType(DataType.ARRAY);
+        jsonNode.setValue(jsonNodeList);
+
         return ResultCode.OK;
     }
 
     private ResultCode parseSuffixWhiteSpace(JsonNode jsonNode, ParseContext parseContext) {
         parseWhitespace(parseContext);
-        String jsonStr = parseContext.jsonStr;
-        if (jsonStr.length() != 0) {
-            return ResultCode.ROOT_NOT_SINGULAR;
-        } else {
-            return ResultCode.OK;
-        }
+        return ResultCode.OK;
     }
     private ResultCode parseNumber(JsonNode jsonNode, ParseContext parseContext){
         String jsonStr=parseContext.jsonStr;
-
+        int subIndex=jsonStr.indexOf(',');
+        if(subIndex==-1){
+            subIndex=jsonStr.indexOf(']');
+            if(subIndex==-1){
+                subIndex=jsonStr.indexOf("}");
+            }
+        }
+        if(subIndex!=-1){
+            jsonStr=jsonStr.substring(0,subIndex);
+        }
+        jsonStr=jsonStr.trim();
         if(ResultCode.OK!=checkNumber(jsonStr)){
             return ResultCode.INVALID_VALUE;
         }
@@ -214,6 +277,9 @@ public class AsJsonImpl implements AsJson {
             double result=Double.valueOf(jsonStr);
             jsonNode.setNum(result);
             jsonNode.setType(DataType.NUMBER);
+            if(subIndex!=-1){
+                parseContext.jsonStr=parseContext.jsonStr.substring(subIndex);
+            }
             return ResultCode.OK;
         }catch (Exception e){
             return ResultCode.INVALID_VALUE;

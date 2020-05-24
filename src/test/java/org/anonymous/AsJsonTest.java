@@ -1,6 +1,7 @@
 package org.anonymous;
 
 import org.anonymous.constant.DataType;
+import org.anonymous.constant.JsonDataConstant;
 import org.anonymous.constant.ResultCode;
 import org.anonymous.data.JsonNode;
 import org.testng.Assert;
@@ -239,5 +240,118 @@ public class AsJsonTest {
             checkUtf8NotOk(jsonStr,resultCode);
         }
 
+    }
+
+
+    @Test
+    public void testParseArray(){
+        // test empty array
+        JsonNode expect=new JsonNode();
+        expect.setType(DataType.ARRAY);
+        expect.setValue(new ArrayList<JsonNode>());
+        String arrayStr="[]";
+        testParseCorrectArray(arrayStr,expect);
+
+        // test number array
+        expect=new JsonNode();
+        expect.setType(DataType.ARRAY);
+        List<JsonNode> nodes=new ArrayList<>();
+        JsonNode arrayNode1=new JsonNode();
+        arrayNode1.setType(DataType.NUMBER);
+        arrayNode1.setValue(1.0);
+        nodes.add(arrayNode1);
+        expect.setValue(nodes);
+        arrayStr="[1.0]";
+        testParseCorrectArray(arrayStr,expect);
+
+        //test number array
+        expect=new JsonNode();
+        expect.setType(DataType.ARRAY);
+        nodes=new ArrayList<>();
+        arrayNode1=new JsonNode();
+        arrayNode1.setType(DataType.NUMBER);
+        arrayNode1.setValue(1.0);
+        JsonNode arrayNode2=new JsonNode();
+        arrayNode2.setType(DataType.NUMBER);
+        arrayNode2.setValue(-1.5);
+        nodes.add(arrayNode1);
+        nodes.add(arrayNode2);
+        expect.setValue(nodes);
+        arrayStr="[1.0,-1.5]";
+        testParseCorrectArray(arrayStr,expect);
+
+        //test string array
+        expect=new JsonNode();
+        expect.setType(DataType.ARRAY);
+        nodes=new ArrayList<>();
+        arrayNode1=new JsonNode();
+        arrayNode1.setType(DataType.STRING);
+        arrayNode1.setValue("abc");
+        arrayNode2=new JsonNode();
+        arrayNode2.setType(DataType.STRING);
+        arrayNode2.setValue("\u00F0\u009D\u0084\u009E");
+
+        nodes.add(arrayNode1);
+        nodes.add(arrayNode2);
+        expect.setValue(nodes);
+        arrayStr="[\"abc\",\"\\ud834\\udd1e\"]";
+        testParseCorrectArray(arrayStr,expect);
+
+        //test true, false, null array
+        expect=new JsonNode();
+        expect.setType(DataType.ARRAY);
+        nodes=new ArrayList<>();
+        arrayNode1=new JsonNode();
+        arrayNode1.setType(DataType.TRUE);
+        arrayNode1.setValue(true);
+        arrayNode2=new JsonNode();
+        arrayNode2.setType(DataType.FALSE);
+        arrayNode2.setValue(false);
+        JsonNode arrayNode3=new JsonNode();
+        arrayNode3.setType(DataType.NULL);
+        arrayNode3.setValue(JsonDataConstant.NULL);
+
+
+        nodes.add(arrayNode1);
+        nodes.add(arrayNode2);
+        nodes.add(arrayNode3);
+        expect.setValue(nodes);
+        arrayStr="[true,false,null]";
+        testParseCorrectArray(arrayStr,expect);
+
+        //test nested array
+        expect=new JsonNode();
+        expect.setType(DataType.ARRAY);
+        nodes=new ArrayList<>();
+        arrayNode1.setType(DataType.TRUE);
+        arrayNode1.setValue(true);
+        arrayNode2.setType(DataType.ARRAY);
+        List<JsonNode> nodes1=new ArrayList<>();
+        JsonNode nestedNode1=new JsonNode();
+        nestedNode1.setType(DataType.TRUE);
+        nestedNode1.setValue(true);
+        JsonNode nestedNode2=new JsonNode();
+        nestedNode2.setType(DataType.FALSE);
+        nestedNode2.setValue(false);
+        nodes1.add(nestedNode1);
+        nodes1.add(nestedNode2);
+        arrayNode2.setValue(nodes1);
+        arrayNode3.setType(DataType.NULL);
+        arrayNode3.setValue(JsonDataConstant.NULL);
+
+
+        nodes.add(arrayNode1);
+        nodes.add(arrayNode2);
+        nodes.add(arrayNode3);
+        expect.setValue(nodes);
+        arrayStr="[true,[true,false],null]";
+        testParseCorrectArray(arrayStr,expect);
+    }
+
+    private void testParseCorrectArray(String arrayStr,JsonNode expect){
+        ResultCode resultCode=asJson.parse(jsonNode,arrayStr);
+        Assert.assertEquals(resultCode,ResultCode.OK);
+        Assert.assertEquals(jsonNode.toString(),expect.toString());
+        System.out.println("check finish: "+expect);
     }
 }
