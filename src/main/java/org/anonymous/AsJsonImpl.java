@@ -2,6 +2,7 @@ package org.anonymous;
 
 import org.anonymous.constant.DataType;
 import org.anonymous.constant.ResultCode;
+import org.anonymous.data.JsonMember;
 import org.anonymous.data.JsonNode;
 import org.anonymous.data.ParseContext;
 
@@ -70,6 +71,8 @@ public class AsJsonImpl implements AsJson {
                 return parseStringValue(jsonNode,parseContext);
             case '[':
                 return parseArray(jsonNode,parseContext);
+            case '{':
+                return parseObject(jsonNode,parseContext);
             default:
                 return parseNumber(jsonNode,parseContext);
         }
@@ -212,43 +215,108 @@ public class AsJsonImpl implements AsJson {
     }
 
     private ResultCode parseArray(JsonNode jsonNode, ParseContext parseContext){
+        return parseMultipleValues(jsonNode,parseContext,'[',']',DataType.ARRAY);
+
+//        String jsonStr=parseContext.jsonStr;
+//        int pos=0;
+//        List<Object> jsonNodeList=new ArrayList<>();
+//        if(jsonStr.charAt(pos)=='['&&jsonStr.charAt(pos+1)==']'){
+//            jsonNode.setType(DataType.ARRAY);
+//            jsonNode.setValue(jsonNodeList);
+//            return ResultCode.OK;
+//        }
+//        jsonStr=jsonStr.substring(pos+1);
+//        parseContext.jsonStr=jsonStr;
+//        while(true){
+//            JsonNode tmpJsonNode=new JsonNode();
+//            ResultCode resultCode=parseValue(tmpJsonNode,parseContext);
+//            if(ResultCode.OK!=resultCode){
+//                return resultCode;
+//            }
+//            jsonNodeList.add(tmpJsonNode);
+//            jsonStr=parseContext.jsonStr;
+//            if(jsonStr.charAt(0)==']'){
+//                jsonStr=jsonStr.substring(1);
+//                parseContext.jsonStr=jsonStr;
+//                break;
+//            }
+//            if(jsonStr.length()==0){
+//                return ResultCode.INVALID_VALUE;
+//            }
+//            if(jsonStr.charAt(0)==','){
+//                jsonStr=jsonStr.substring(1);
+//                parseContext.jsonStr=jsonStr;
+//                continue;
+//            }else{
+//                return ResultCode.INVALID_VALUE;
+//            }
+//        }
+//        jsonNode.setType(DataType.ARRAY);
+//        jsonNode.setValue(jsonNodeList);
+//
+//        return ResultCode.OK;
+    }
+
+    private ResultCode parseObject(JsonNode jsonNode, ParseContext parseContext){
+        return parseMultipleValues(jsonNode,parseContext,'{','}',DataType.OBJECT);
+    }
+
+    private ResultCode parseMultipleValues(JsonNode jsonNode, ParseContext parseContext, char surroundPrefix, char surroundSuffix, DataType dataType){
         String jsonStr=parseContext.jsonStr;
         int pos=0;
-        List<JsonNode> jsonNodeList=new ArrayList<>();
-        if(jsonStr.charAt(pos)=='['&&jsonStr.charAt(pos+1)==']'){
-            jsonNode.setType(DataType.ARRAY);
-            jsonNode.setValue(jsonNodeList);
+        if(jsonStr.length()<=1){
+            return ResultCode.INVALID_VALUE;
+        }
+        List<Object> values=new ArrayList<>();
+        if(jsonStr.charAt(pos)==surroundPrefix&&jsonStr.charAt(pos+1)==surroundSuffix){
+            jsonNode.setType(dataType);
+            jsonNode.setValue(values);
             return ResultCode.OK;
         }
-        jsonStr=jsonStr.substring(pos+1);
-        parseContext.jsonStr=jsonStr;
+        parseContext.jsonStr=jsonStr.substring(pos+1);
         while(true){
+            Object tmpObject=null;
             JsonNode tmpJsonNode=new JsonNode();
+            if(DataType.OBJECT==dataType){
+                JsonMember jsonMember=new JsonMember();
+                ResultCode resultCode=parseStringRawValue(parseContext);
+                if(ResultCode.OK!=resultCode){
+                    return resultCode;
+                }
+                jsonStr=parseContext.jsonStr;
+                if(jsonStr.charAt(0)==':'){
+                    parseContext.jsonStr=jsonStr.substring(1);
+                }else{
+                    return ResultCode.INVALID_VALUE;
+                }
+                jsonMember.key=parseContext.currentStr;
+                jsonMember.jsonNode=tmpJsonNode;
+                tmpObject=jsonMember;
+            }else{
+                tmpObject=tmpJsonNode;
+            }
             ResultCode resultCode=parseValue(tmpJsonNode,parseContext);
             if(ResultCode.OK!=resultCode){
                 return resultCode;
             }
-            jsonNodeList.add(tmpJsonNode);
+            values.add(tmpObject);
             jsonStr=parseContext.jsonStr;
-            if(jsonStr.charAt(0)==']'){
-                jsonStr=jsonStr.substring(1);
-                parseContext.jsonStr=jsonStr;
-                break;
-            }
             if(jsonStr.length()==0){
                 return ResultCode.INVALID_VALUE;
             }
+            if(jsonStr.charAt(0)==surroundSuffix){
+                parseContext.jsonStr=jsonStr.substring(1);
+                break;
+            }
             if(jsonStr.charAt(0)==','){
-                jsonStr=jsonStr.substring(1);
-                parseContext.jsonStr=jsonStr;
+                parseContext.jsonStr=jsonStr.substring(1);
                 continue;
             }else{
                 return ResultCode.INVALID_VALUE;
             }
         }
-        jsonNode.setType(DataType.ARRAY);
-        jsonNode.setValue(jsonNodeList);
-
+        jsonNode.setType(dataType);
+        jsonNode.setValue(values);
         return ResultCode.OK;
     }
 

@@ -43,7 +43,7 @@ public class JsonNode {
         this.value=value;
     }
 
-    public void setValue(List<JsonNode> value){
+    public void setValue(List<Object> value){
         this.value=value;
     }
 
@@ -54,6 +54,8 @@ public class JsonNode {
     public Boolean getBoolean(){
         return (Boolean)this.value;
     }
+
+    public JsonMember getObject(){return (JsonMember)this.value;}
 
     @Override
     public String toString() {

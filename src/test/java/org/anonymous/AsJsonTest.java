@@ -3,6 +3,7 @@ package org.anonymous;
 import org.anonymous.constant.DataType;
 import org.anonymous.constant.JsonDataConstant;
 import org.anonymous.constant.ResultCode;
+import org.anonymous.data.JsonMember;
 import org.anonymous.data.JsonNode;
 import org.testng.Assert;
 import org.testng.annotations.BeforeMethod;
@@ -248,14 +249,14 @@ public class AsJsonTest {
         // test empty array
         JsonNode expect=new JsonNode();
         expect.setType(DataType.ARRAY);
-        expect.setValue(new ArrayList<JsonNode>());
+        expect.setValue(new ArrayList<Object>());
         String arrayStr="[]";
         testParseCorrectArray(arrayStr,expect);
 
         // test number array
         expect=new JsonNode();
         expect.setType(DataType.ARRAY);
-        List<JsonNode> nodes=new ArrayList<>();
+        List<Object> nodes=new ArrayList<>();
         JsonNode arrayNode1=new JsonNode();
         arrayNode1.setType(DataType.NUMBER);
         arrayNode1.setValue(1.0);
@@ -326,7 +327,7 @@ public class AsJsonTest {
         arrayNode1.setType(DataType.TRUE);
         arrayNode1.setValue(true);
         arrayNode2.setType(DataType.ARRAY);
-        List<JsonNode> nodes1=new ArrayList<>();
+        List<Object> nodes1=new ArrayList<>();
         JsonNode nestedNode1=new JsonNode();
         nestedNode1.setType(DataType.TRUE);
         nestedNode1.setValue(true);
@@ -353,5 +354,35 @@ public class AsJsonTest {
         Assert.assertEquals(resultCode,ResultCode.OK);
         Assert.assertEquals(jsonNode.toString(),expect.toString());
         System.out.println("check finish: "+expect);
+    }
+
+    @Test
+    public void testParseCorrectObject(){
+        String arrayStr="{\"m1\":\"v1\",\"m2\":\"v2\"}";
+        JsonNode expect=new JsonNode();
+        List<Object> members=new ArrayList<>();
+        JsonMember member1=new JsonMember();
+        member1.key="m1";
+        JsonNode value1= new JsonNode();
+        member1.jsonNode=value1;
+        value1.setType(DataType.STRING);
+        value1.setValue("v1");
+        members.add(member1);
+        JsonMember member2=new JsonMember();
+        member2.key="m2";
+        JsonNode value2= new JsonNode();
+        member2.jsonNode=value2;
+        value2.setType(DataType.STRING);
+        value2.setValue("v2");
+        members.add(member2);
+        expect.setType(DataType.OBJECT);
+        expect.setValue(members);
+        testParseCorrectObject(arrayStr,expect);
+    }
+    private void testParseCorrectObject(String arrayStr, JsonNode expect){
+        ResultCode resultCode=asJson.parse(jsonNode,arrayStr);
+        Assert.assertEquals(resultCode,ResultCode.OK);
+        Assert.assertEquals(jsonNode.toString(),expect.toString());
+        System.out.println("check finish "+expect);
     }
 }
