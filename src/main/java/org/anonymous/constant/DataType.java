@@ -4,19 +4,19 @@ package org.anonymous.constant;
  * seven types of json data
  */
 public enum DataType {
-    NULL(0),
-    FALSE(1),
-    TRUE(2),
-    NUMBER(3),
-    STRING(4),
-    ARRAY(5),
-    OBJECT(6);
-    private int value;
-    DataType(int value){
+    NULL("null"),
+    FALSE("false"),
+    TRUE("true"),
+    NUMBER("number"),
+    STRING("string"),
+    ARRAY("array"),
+    OBJECT("object");
+    private String value;
+    DataType(String value){
         this.value=value;
     }
 
-    public int getValue() {
+    public String getValue() {
         return value;
     }
 }

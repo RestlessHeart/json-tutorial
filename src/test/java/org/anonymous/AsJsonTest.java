@@ -9,12 +9,9 @@ import org.testng.Assert;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 
-import javax.xml.transform.Result;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.List;
-
-import static java.nio.charset.StandardCharsets.UTF_8;
 
 public class AsJsonTest {
 
@@ -25,14 +22,14 @@ public class AsJsonTest {
     @BeforeMethod
     public void prepareData(){
         jsonNode=new JsonNode();
-        jsonNode.setType(DataType.TRUE);
+        jsonNode.setType(DataType.NULL);
         asJson=new AsJsonImpl();
     }
 
     @Test
     public void testParseNull(){
         Assert.assertEquals(ResultCode.OK, asJson.parse(jsonNode,"null"));
-        Assert.assertEquals(DataType.NULL,asJson.getType(jsonNode));
+        Assert.assertEquals(DataType.NULL,jsonNode.getType());
     }
 
     @Test
@@ -49,7 +46,7 @@ public class AsJsonTest {
     @Test
     public void testParseFalse(){
         Assert.assertEquals(ResultCode.OK, asJson.parse(jsonNode," false "));
-        Assert.assertEquals(DataType.FALSE,asJson.getType(jsonNode));
+        Assert.assertEquals(DataType.FALSE,jsonNode.getType());
     }
 
     @Test
@@ -66,7 +63,7 @@ public class AsJsonTest {
     @Test
     public void testParseTrue(){
         Assert.assertEquals(ResultCode.OK, asJson.parse(jsonNode," true "));
-        Assert.assertEquals(DataType.TRUE,asJson.getType(jsonNode));
+        Assert.assertEquals(DataType.TRUE,jsonNode.getType());
     }
 
     @Test
@@ -357,6 +354,18 @@ public class AsJsonTest {
     }
 
     @Test
+    public void testParseWrongArray(){
+        String jsonArray="[1,2";
+        parseWrongArray(jsonArray,ResultCode.PARSE_MISS_COMMA_OR_CURLY_BRACKET);
+    }
+
+    private void parseWrongArray(String jsonArray,ResultCode expectResultCode){
+        ResultCode resultCode=asJson.parse(jsonNode,jsonArray);
+        Assert.assertEquals(resultCode,expectResultCode);
+        System.out.println("check wrong string "+jsonArray+" finish.");
+    }
+
+    @Test
     public void testParseCorrectObject(){
         String arrayStr="{\"m1\":\"v1\",\"m2\":\"v2\"}";
         JsonNode expect=new JsonNode();
@@ -379,10 +388,49 @@ public class AsJsonTest {
         expect.setValue(members);
         testParseCorrectObject(arrayStr,expect);
     }
-    private void testParseCorrectObject(String arrayStr, JsonNode expect){
-        ResultCode resultCode=asJson.parse(jsonNode,arrayStr);
+
+    private void testParseCorrectObject(String objectStr, JsonNode expect){
+        ResultCode resultCode=asJson.parse(jsonNode, objectStr);
         Assert.assertEquals(resultCode,ResultCode.OK);
         Assert.assertEquals(jsonNode.toString(),expect.toString());
         System.out.println("check finish "+expect);
     }
+
+    @Test
+    public void testParseWrongObject(){
+        String objectStr="{\"a\"}";
+        testParseWrongObject(objectStr,ResultCode.PARSE_MISS_COLON);
+
+        objectStr="{:\"a\"}";
+        testParseWrongObject(objectStr,ResultCode.PARSE_MISS_KEY);
+
+        objectStr="{\"a\":\"b\"";
+        testParseWrongObject(objectStr,ResultCode.PARSE_MISS_COMMA_OR_CURLY_BRACKET);
+
+        objectStr="{\"a\":\"b\"1";
+        testParseWrongObject(objectStr,ResultCode.PARSE_MISS_COMMA_OR_CURLY_BRACKET);
+    }
+
+    private void testParseWrongObject(String objectStr, ResultCode expectCode){
+        ResultCode resultCode=asJson.parse(jsonNode,objectStr);
+        Assert.assertEquals(resultCode,expectCode);
+    }
+
+    @Test
+    public void testSuccessfulGenerate(){
+        String expect="{\"a\":null}";
+        asJson.parse(jsonNode,expect);
+        testSuccessfulGenerate(expect);
+
+        expect="{\"a\":[null,false,true,1.5,\"a\",[\"a1\",\"a2\"],{\"na\":\"na\",\"nb\":\"nb\"}],\"b\":{\"c\":\"cValue\"}}";
+        asJson.parse(jsonNode,expect);
+        testSuccessfulGenerate(expect);
+    }
+
+    private void testSuccessfulGenerate(String expect){
+        String result=asJson.generate(jsonNode);
+        Assert.assertEquals(result,expect);
+        System.out.println("successful generate: "+expect);
+    }
+
 }

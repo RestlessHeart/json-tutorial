@@ -55,7 +55,7 @@ public class JsonNode {
         return (Boolean)this.value;
     }
 
-    public JsonMember getObject(){return (JsonMember)this.value;}
+    public List<JsonMember> getObject(){return (List<JsonMember>)this.value;}
 
     @Override
     public String toString() {
@@ -64,4 +64,45 @@ public class JsonNode {
                 ", value=" + value +
                 '}';
     }
+
+//    public JsonNode getObjectValue(String key){
+//        for(JsonMember jsonMember:this.getObject()){
+//            if(key.equals(jsonMember.key)){
+//                return jsonMember.jsonNode;
+//            }
+//        }
+//        return null;
+//    }
+//
+//    public boolean equals(JsonNode jsonNode){
+//        if(type!=jsonNode.getType()){
+//            return false;
+//        }
+//        switch(type){
+//            case NULL:
+//            case TRUE:
+//            case FALSE:
+//                return true;
+//            case STRING:
+//                return this.getString()==jsonNode.getString();
+//            case NUMBER:
+//                return this.getNum()==jsonNode.getNum();
+//            case ARRAY:
+//                this.getArray().equals(jsonNode.getArray());
+//            case OBJECT:
+//                List<JsonMember> members1=this.getObject();
+//                List<JsonMember> members2=jsonNode.getObject();
+//                if(members1.size()!=members2.size()){
+//                    return false;
+//                }
+//                for(JsonMember jsonMember:members1){
+//                    if(!jsonMember.jsonNode.equals(jsonNode.getObjectValue(jsonMember.key))){
+//                        return false;
+//                    }
+//                }
+//                return true;
+//            default:
+//                return false;
+//        }
+//    }
 }

@@ -1,6 +1,5 @@
 package org.anonymous;
 
-import org.anonymous.constant.DataType;
 import org.anonymous.constant.ResultCode;
 import org.anonymous.data.JsonNode;
 
@@ -13,12 +12,9 @@ public interface AsJson {
     ResultCode parse(JsonNode jsonNode, final String jsonStr);
 
     /**
-     * @param jsonNode json data node
-     * @return the data type of this node
+     *  generate json string from json object
+     * @param jsonNode root json node
+     * @return json format string for jsonNode
      */
-    DataType getType(final JsonNode jsonNode);
-    /**
-     *
-     */
-    double getNumber(final JsonNode jsonNode);
+    String generate(JsonNode jsonNode);
 }

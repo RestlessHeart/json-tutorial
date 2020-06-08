@@ -5,6 +5,7 @@ import org.anonymous.constant.ResultCode;
 import org.anonymous.data.JsonMember;
 import org.anonymous.data.JsonNode;
 import org.anonymous.data.ParseContext;
+import org.anonymous.utils.JsonGenerator;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -32,12 +33,9 @@ public class AsJsonImpl implements AsJson {
         return parseValue(jsonNode, parseContext);
     }
 
-    public DataType getType(JsonNode jsonNode) {
-        return jsonNode.getType();
-    }
-
-    public double getNumber(JsonNode jsonNode){
-        return jsonNode.getNum();
+    @Override
+    public String generate(JsonNode jsonNode) {
+        return JsonGenerator.generate(jsonNode);
     }
 
     private void parseWhitespace(ParseContext parseContext) {
@@ -119,6 +117,9 @@ public class AsJsonImpl implements AsJson {
 
     private ResultCode parseStringRawValue(ParseContext parseContext){
         String jsonStr=parseContext.jsonStr;
+        if(jsonStr.charAt(0)!='"'){
+            return ResultCode.INVALID_VALUE;
+        }
         int strSize=0;
         int pos=1;
         while(pos<jsonStr.length()&&jsonStr.charAt(pos)!='"'){
@@ -281,13 +282,13 @@ public class AsJsonImpl implements AsJson {
                 JsonMember jsonMember=new JsonMember();
                 ResultCode resultCode=parseStringRawValue(parseContext);
                 if(ResultCode.OK!=resultCode){
-                    return resultCode;
+                    return ResultCode.PARSE_MISS_KEY;
                 }
                 jsonStr=parseContext.jsonStr;
                 if(jsonStr.charAt(0)==':'){
                     parseContext.jsonStr=jsonStr.substring(1);
                 }else{
-                    return ResultCode.INVALID_VALUE;
+                    return ResultCode.PARSE_MISS_COLON;
                 }
                 jsonMember.key=parseContext.currentStr;
                 jsonMember.jsonNode=tmpJsonNode;
@@ -302,19 +303,25 @@ public class AsJsonImpl implements AsJson {
             values.add(tmpObject);
             jsonStr=parseContext.jsonStr;
             if(jsonStr.length()==0){
-                return ResultCode.INVALID_VALUE;
+                return ResultCode.PARSE_MISS_COMMA_OR_CURLY_BRACKET;
             }
-            if(jsonStr.charAt(0)==surroundSuffix){
-                parseContext.jsonStr=jsonStr.substring(1);
-                break;
+            if(jsonStr.length()==1){
+                if(jsonStr.charAt(0)==surroundSuffix){
+                    parseContext.jsonStr=jsonStr.substring(1);
+                    break;
+                }else{
+                    return ResultCode.PARSE_MISS_COMMA_OR_CURLY_BRACKET;
+                }
             }
+
             if(jsonStr.charAt(0)==','){
                 parseContext.jsonStr=jsonStr.substring(1);
                 continue;
             }else{
-                return ResultCode.INVALID_VALUE;
+                return ResultCode.PARSE_MISS_COMMA_OR_CURLY_BRACKET;
             }
         }
+
         jsonNode.setType(dataType);
         jsonNode.setValue(values);
         return ResultCode.OK;
