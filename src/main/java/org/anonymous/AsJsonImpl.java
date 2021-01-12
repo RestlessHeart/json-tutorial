@@ -217,45 +217,6 @@ public class AsJsonImpl implements AsJson {
 
     private ResultCode parseArray(JsonNode jsonNode, ParseContext parseContext){
         return parseMultipleValues(jsonNode,parseContext,'[',']',DataType.ARRAY);
-
-//        String jsonStr=parseContext.jsonStr;
-//        int pos=0;
-//        List<Object> jsonNodeList=new ArrayList<>();
-//        if(jsonStr.charAt(pos)=='['&&jsonStr.charAt(pos+1)==']'){
-//            jsonNode.setType(DataType.ARRAY);
-//            jsonNode.setValue(jsonNodeList);
-//            return ResultCode.OK;
-//        }
-//        jsonStr=jsonStr.substring(pos+1);
-//        parseContext.jsonStr=jsonStr;
-//        while(true){
-//            JsonNode tmpJsonNode=new JsonNode();
-//            ResultCode resultCode=parseValue(tmpJsonNode,parseContext);
-//            if(ResultCode.OK!=resultCode){
-//                return resultCode;
-//            }
-//            jsonNodeList.add(tmpJsonNode);
-//            jsonStr=parseContext.jsonStr;
-//            if(jsonStr.charAt(0)==']'){
-//                jsonStr=jsonStr.substring(1);
-//                parseContext.jsonStr=jsonStr;
-//                break;
-//            }
-//            if(jsonStr.length()==0){
-//                return ResultCode.INVALID_VALUE;
-//            }
-//            if(jsonStr.charAt(0)==','){
-//                jsonStr=jsonStr.substring(1);
-//                parseContext.jsonStr=jsonStr;
-//                continue;
-//            }else{
-//                return ResultCode.INVALID_VALUE;
-//            }
-//        }
-//        jsonNode.setType(DataType.ARRAY);
-//        jsonNode.setValue(jsonNodeList);
-//
-//        return ResultCode.OK;
     }
 
     private ResultCode parseObject(JsonNode jsonNode, ParseContext parseContext){
@@ -305,16 +266,12 @@ public class AsJsonImpl implements AsJson {
             if(jsonStr.length()==0){
                 return ResultCode.PARSE_MISS_COMMA_OR_CURLY_BRACKET;
             }
-            if(jsonStr.length()==1){
-                if(jsonStr.charAt(0)==surroundSuffix){
-                    parseContext.jsonStr=jsonStr.substring(1);
-                    break;
-                }else{
-                    return ResultCode.PARSE_MISS_COMMA_OR_CURLY_BRACKET;
-                }
-            }
 
-            if(jsonStr.charAt(0)==','){
+            if(jsonStr.charAt(0)==surroundSuffix){
+                jsonStr=jsonStr.substring(1);
+                parseContext.jsonStr=jsonStr;
+                break;
+            }else if(jsonStr.charAt(0)==','){
                 parseContext.jsonStr=jsonStr.substring(1);
                 continue;
             }else{

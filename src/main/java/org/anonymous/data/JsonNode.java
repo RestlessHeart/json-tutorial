@@ -2,6 +2,7 @@ package org.anonymous.data;
 
 import org.anonymous.constant.DataType;
 
+import java.util.ArrayList;
 import java.util.List;
 
 public class JsonNode {
@@ -47,6 +48,18 @@ public class JsonNode {
         this.value=value;
     }
 
+    public JsonNode getValue(String key){
+        if(getType()!=DataType.OBJECT){
+            throw new UnsupportedOperationException("You could not get value from a non-object json.");
+        }
+        for(JsonMember member:getObject()){
+            if(key.equals(member.key)){
+                return member.jsonNode;
+            }
+        }
+        return null;
+    }
+
     public List<JsonNode> getArray(){
         return (List<JsonNode>)this.value;
     }
@@ -65,44 +78,55 @@ public class JsonNode {
                 '}';
     }
 
-//    public JsonNode getObjectValue(String key){
-//        for(JsonMember jsonMember:this.getObject()){
-//            if(key.equals(jsonMember.key)){
-//                return jsonMember.jsonNode;
-//            }
-//        }
-//        return null;
-//    }
-//
-//    public boolean equals(JsonNode jsonNode){
-//        if(type!=jsonNode.getType()){
-//            return false;
-//        }
-//        switch(type){
-//            case NULL:
-//            case TRUE:
-//            case FALSE:
-//                return true;
-//            case STRING:
-//                return this.getString()==jsonNode.getString();
-//            case NUMBER:
-//                return this.getNum()==jsonNode.getNum();
-//            case ARRAY:
-//                this.getArray().equals(jsonNode.getArray());
-//            case OBJECT:
-//                List<JsonMember> members1=this.getObject();
-//                List<JsonMember> members2=jsonNode.getObject();
-//                if(members1.size()!=members2.size()){
-//                    return false;
-//                }
-//                for(JsonMember jsonMember:members1){
-//                    if(!jsonMember.jsonNode.equals(jsonNode.getObjectValue(jsonMember.key))){
-//                        return false;
-//                    }
-//                }
-//                return true;
-//            default:
-//                return false;
-//        }
-//    }
+    // get object value
+    public JsonNode getObjectValue(String key){
+        for(JsonMember jsonMember:this.getObject()){
+            if(key.equals(jsonMember.key)){
+                return jsonMember.jsonNode;
+            }
+        }
+        return null;
+    }
+
+    // get object keys
+    public List<String> getObjectKeys(){
+        List<String> keys=new ArrayList<>();
+        for(JsonMember jsonMember: this.getObject()){
+            keys.add(jsonMember.key);
+        }
+        return keys;
+    }
+
+    // equals
+    public boolean equals(JsonNode jsonNode){
+        if(type!=jsonNode.getType()){
+            return false;
+        }
+        switch(type){
+            case NULL:
+            case TRUE:
+            case FALSE:
+                return true;
+            case STRING:
+                return this.getString()==jsonNode.getString();
+            case NUMBER:
+                return this.getNum()==jsonNode.getNum();
+            case ARRAY:
+                this.getArray().equals(jsonNode.getArray());
+            case OBJECT:
+                List<JsonMember> members1=this.getObject();
+                List<JsonMember> members2=jsonNode.getObject();
+                if(members1.size()!=members2.size()){
+                    return false;
+                }
+                for(JsonMember jsonMember:members1){
+                    if(!jsonMember.jsonNode.equals(jsonNode.getObjectValue(jsonMember.key))){
+                        return false;
+                    }
+                }
+                return true;
+            default:
+                return false;
+        }
+    }
 }
